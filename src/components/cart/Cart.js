@@ -87,7 +87,6 @@ export default function Cart() {
                     </div>
                 </Fragment>
             }
-           
-        </Fragment>
+        </Fragment> 
     )
 }

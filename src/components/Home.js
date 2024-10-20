@@ -13,7 +13,7 @@ export default function Home() {
     const dispatch = useDispatch()
     const {products,loading,error,productsCount,resPerPage} = useSelector((state => state.productsState))
     const [currentPage,setCurrentPage] = useState(1);
-    console.log(currentPage);
+
     const setCurrentPageNo = (pageNo) =>{
         setCurrentPage(pageNo)
     }
@@ -25,7 +25,7 @@ export default function Home() {
         }))
         }
         dispatch(getProducts(null,null,null,null,currentPage))
-    }, [error,currentPage])
+    }, [error,currentPage,dispatch])
     
   return (
     <Fragment>

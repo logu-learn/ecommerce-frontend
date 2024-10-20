@@ -122,8 +122,10 @@ export const ProductDetails = () => {
                 </div>
         </div>
     </div>
-</div> </>
-        }
+        </div> 
+    {/* product.reviews && product.reviews.length > 0 ? <ProductReview/> */}
+        </>
+       }
    </>
   )
 }

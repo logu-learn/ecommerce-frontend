@@ -29,7 +29,7 @@ export const ConfirmOrder = () => {
 
     useEffect(()=>{
         validateShipping(shippingInfo,navigate)
-    },[])
+    },[navigate,shippingInfo])
   return (
     <>
         <MetaData title={"Confirm Order"}/>

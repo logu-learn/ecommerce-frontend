@@ -9,7 +9,7 @@ export const OrderSuccess = () => {
 
                 <h2>Your Order has been placed successfully.</h2>
 
-                <Link t="/order/success">Go to Orders</Link>
+                <Link to="/order/success">Go to Orders</Link>
             </div>
 
     </div>

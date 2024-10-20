@@ -1,23 +1,27 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useStripe, useElements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { validateShipping } from '../cart/Shipping';
+import Cookies from 'js-cookie';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { orderCompleted } from '../../slices/cartSlice';
+import { createOrder } from '../../actions/orderActions';
+// import { clearError as clearOrderError } from '../../slices/orderSlice';
 
 export const Payment = () => {
     const stripe = useStripe();
     const elements = useElements();
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const orderInfo = JSON.parse(sessionStorage.getItem('orderInfo'));
+    const orderInfo = JSON.parse(sessionStorage.getItem('orderInfo')) || {}; // Default to empty object
     const { user } = useSelector(state => state.authState);
     const { items: cartItems, shippingInfo } = useSelector(state => state.cartState);
+    // const { error: orderError } = useSelector(state => state.orderState);
 
+    // Safely access totalPrice and ensure orderInfo is an object
     const paymentData = {
-        amount: Math.round(orderInfo.totalPrice * 100),
+        amount: Math.round((orderInfo.totalPrice || 0) * 100),
         shipping: {
             name: user.name,
             address: {
@@ -32,26 +36,35 @@ export const Payment = () => {
 
     const order = {
         orderItems: cartItems,
-        shippingInfo
+        shippingInfo,
+        itemsPrice: orderInfo.itemsPrice || 0,
+        shippingPrice: orderInfo.shippingPrice || 0,
+        taxPrice: orderInfo.taxPrice || 0,
+        totalPrice: orderInfo.totalPrice || 0,
     };
 
-    if (orderInfo) {
-        order.itemsPrice = orderInfo.itemsPrice;
-        order.shippingPrice = orderInfo.shippingPrice;
-        order.taxPrice = orderInfo.taxPrice;
-        order.totalPrice = orderInfo.totalPrice;
-    }
+    // useEffect(() => {
+    //     if(orderError){
+    //         toast("Please fill the shipping information", {
+    //             type: "error",
+    //             position: 'bottom-center'
+    //         });
+    //     }
+    // }, []);
 
-    useEffect(() => {
-        validateShipping(shippingInfo, navigate);
-    }, [shippingInfo, navigate]);
 
     const submitHandler = async (e) => {
         e.preventDefault();
         document.querySelector('#pay_btn').disabled = true;
 
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/api/v1/payment/process', paymentData);
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + Cookies.get('token')
+                }
+            };
+            const { data } = await axios.post('http://127.0.0.1:8000/api/v1/payment/process', paymentData, config);
             const clientSecret = data.client_secret;
 
             const result = await stripe.confirmCardPayment(clientSecret, {
@@ -65,7 +78,7 @@ export const Payment = () => {
                             city: shippingInfo.city,
                             state: shippingInfo.state,
                             postal_code: shippingInfo.postalCode,
-                            country: shippingInfo.country
+                            country: shippingInfo.country.iso
                         }
                     }
                 }
@@ -73,27 +86,26 @@ export const Payment = () => {
 
             if (result.error) {
                 console.error(result.error.message);
-
-                toast.error((await result).error.message,{
-                  type: 'error',
-                  position:'bottom-center'
-              })
-
+                toast.error(result.error.message, {
+                    type: 'error',
+                    position: 'bottom-center'
+                });
                 document.querySelector('#pay_btn').disabled = false;
             } else {
-                if ((await result).paymentIntent.status === 'succeeded') {
-                  toast('Payment Success!',{
-                    type: 'success',
-                    position:'bottom-center'
-                  })
-                    dispatch(orderCompleted())
+                if (result.paymentIntent.status === 'succeeded') {
+                    toast('Payment Success!', {
+                        type: 'success',
+                        position: 'bottom-center'
+                    });
+                    dispatch(orderCompleted());
+                    dispatch(createOrder(order));
+
                     navigate('/order/success');
-                }
-                else{
-                  toast('Please Try again!',{
-                    type: 'warning',
-                    position:'bottom-center'
-                  })
+                } else {
+                    toast('Please Try again!', {
+                        type: 'warning',
+                        position: 'bottom-center'
+                    });
                 }
             }
         } catch (error) {
@@ -123,7 +135,7 @@ export const Payment = () => {
                     </div>
 
                     <button id="pay_btn" type="submit" className="btn btn-block py-3">
-                        Pay {`$${orderInfo && orderInfo.totalPrice}`}
+                        Pay {`$${orderInfo.totalPrice || 0}`} {/* Safely access totalPrice */}
                     </button>
                 </form>
             </div>
